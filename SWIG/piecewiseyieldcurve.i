@@ -10,7 +10,7 @@
  under the terms of the QuantLib license.  You should have received a
  copy of the license along with this program; if not, please email
  <quantlib-dev@lists.sf.net>. The license is also available online at
- <https://www.quantlib.org/license.shtml>.
+ <http://quantlib.org/license.shtml>.
 
  This program is distributed in the hope that it will be useful, but WITHOUT
  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
@@ -146,6 +146,40 @@ class Name : public YieldTermStructure {
 
 %enddef
 
+%define export_piecewise_curve_new(Name,Traits,Interpolator)
+
+%{
+typedef PiecewiseYieldCurve<Traits, Interpolator> Name;
+%}
+
+%shared_ptr(Name);
+class Name : public YieldTermStructure {
+  public:
+    %extend {
+        Name(Integer settlementDays, const Calendar& calendar,
+             const std::vector<ext::shared_ptr<RateHelper> >& instruments,
+             const DayCounter& dayCounter,
+			 const Interpolator& i,
+             const _IterativeBootstrap& b = _IterativeBootstrap())
+              {
+            return new Name(settlementDays, calendar, instruments, dayCounter,
+                            i, make_bootstrap<Name>(b));
+        }
+    }
+    const std::vector<Date>& dates() const;
+    const std::vector<Time>& times() const;
+    const std::vector<Real>& data() const;
+    #if !defined(SWIGR)
+    std::vector<std::pair<Date,Real> > nodes() const;
+    #endif
+
+    void recalculate();
+    void freeze();
+    void unfreeze();
+};
+
+%enddef
+
 
 export_piecewise_curve(PiecewiseFlatForward,ForwardRate,BackwardFlat);
 export_piecewise_curve(PiecewiseLogLinearDiscount,Discount,LogLinear);
@@ -165,6 +199,14 @@ export_piecewise_curve(PiecewiseParabolicCubicZero,ZeroYield,ParabolicCubic);
 export_piecewise_curve(PiecewiseMonotonicParabolicCubicZero,ZeroYield,MonotonicParabolicCubic);
 export_piecewise_curve(PiecewiseLogParabolicCubicDiscount,Discount,LogParabolicCubic);
 export_piecewise_curve(PiecewiseMonotonicLogParabolicCubicDiscount,Discount,MonotonicLogParabolicCubic);
+
+export_piecewise_curve_new(PiecewiseMixedFlatCubicForward, ForwardRate, MixedFlatCubicInterpolation);
+export_piecewise_curve_new(PiecewiseMixedFlatCubicZero, ZeroYield, MixedFlatCubicInterpolation);
+export_piecewise_curve_new(PiecewiseMixedFlatCubicDiscount, Discount, MixedFlatCubicInterpolation);
+
+export_piecewise_curve_new(PiecewiseMixedFlatConvexMonotoneForward, ForwardRate, MixedFlatConvexMonotoneInterpolation);
+export_piecewise_curve_new(PiecewiseMixedFlatConvexMonotoneZero, ZeroYield, MixedFlatConvexMonotoneInterpolation);
+export_piecewise_curve_new(PiecewiseMixedFlatConvexMonotoneDiscount, Discount, MixedFlatConvexMonotoneInterpolation);
 
 
 // global boostrapper

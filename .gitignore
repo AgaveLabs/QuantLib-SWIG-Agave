@@ -51,3 +51,5 @@ testCaseCollection.xml
 *.pch
 *.idb
 *.ipch
+
+*.whl
