@@ -115,7 +115,23 @@ def libraries():
 
     compiler = get_default_compiler()
 
-    if compiler == "unix":
+    if compiler == "msvc":
+        # Find the QuantLib library in the build directory
+        import glob
+        ql_dir = os.environ.get("QL_DIR", "")
+        lib_patterns = [
+            os.path.join(ql_dir, "build", "ql", "Release", "QuantLib*.lib"),
+            os.path.join(ql_dir, "lib", "QuantLib*.lib"),
+        ]
+        for pattern in lib_patterns:
+            libs = glob.glob(pattern)
+            if libs:
+                # Extract library name without path and extension
+                lib_name = os.path.splitext(os.path.basename(libs[0]))[0]
+                libraries.append(lib_name)
+                break
+
+    elif compiler == "unix":
         ql_link_args = os.popen("quantlib-config --libs").read()[:-1].split()
 
         libraries += [arg[2:] for arg in ql_link_args if arg.startswith("-l")]
