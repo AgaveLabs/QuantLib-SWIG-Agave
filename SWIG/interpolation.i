@@ -161,8 +161,10 @@ using QuantLib::ConvexMonotone;
 using QuantLib::DefaultLogCubic;
 using QuantLib::MonotonicLogCubic;
 using QuantLib::KrugerLog;
-using QuantLib::MixedFlatCubic;
-using QuantLib::MixedFlatConvexMonotone;
+using QuantLib::MixedForwardFlatCubic;
+using QuantLib::MixedBackwardFlatCubic;
+using QuantLib::MixedForwardFlatConvexMonotone;
+using QuantLib::MixedBackwardFlatConvexMonotone;
 
 class MonotonicCubic : public Cubic {
   public:
@@ -207,30 +209,7 @@ class LogMixedLinearCubic : public QuantLib::LogMixedLinearCubic {
     : QuantLib::LogMixedLinearCubic(n, behavior, da, monotonic) {}
 };
 
-class MixedFlatCubicInterpolation : public QuantLib::MixedFlatCubic {
-  public:
-    MixedFlatCubicInterpolation(
-        Size n = 0,
-        MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
-        CubicInterpolation::DerivativeApprox da = CubicInterpolation::Spline,
-        bool monotonic = true)
-    : QuantLib::MixedFlatCubic(n, behavior, da, monotonic) {}
-    static const bool global = true;
-    static const Size requiredPoints = 3;
-};
 
-class MixedFlatConvexMonotoneInterpolation : public QuantLib::MixedFlatConvexMonotone {
-  public:
-    MixedFlatConvexMonotoneInterpolation(
-        Size n = 0,
-        MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
-        Real quadraticity = 0.3,
-        Real monotonicity = 0.7,
-        bool forcePositive = true)
-    : QuantLib::MixedFlatConvexMonotone(n, behavior, quadraticity, monotonicity, forcePositive) {}
-    static const bool global = true;
-    static const Size requiredPoints = 2;
-};
 
 
 class ParabolicCubic : public QuantLib::Cubic {
@@ -279,6 +258,13 @@ struct CubicInterpolation {
         Kruger,
         Harmonic,
     };
+    enum BoundaryCondition {
+        NotAKnot,
+        FirstDerivative,
+        SecondDerivative,
+        Periodic,
+        Lagrange,
+    };
 };
 
 %nodefaultctor MixedInterpolation;
@@ -320,24 +306,55 @@ struct LogMixedLinearCubic {
         bool monotonic = true);
 };
 
-struct MixedFlatCubicInterpolation {
+struct MixedForwardFlatCubic {
     #if !defined(SWIGJAVA) && !defined(SWIGCSHARP)
-    %feature("kwargs") MixedFlatCubicInterpolation;
+    %feature("kwargs") MixedForwardFlatCubic;
     #endif
-    MixedFlatCubicInterpolation(
-        Size n = 0,
-        MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
-        CubicInterpolation::DerivativeApprox da = CubicInterpolation::Spline,
-        bool monotonic = true);
+    MixedForwardFlatCubic(
+        Size n,
+        MixedInterpolation::Behavior behavior,
+        CubicInterpolation::DerivativeApprox da,
+        bool monotonic = true,
+        CubicInterpolation::BoundaryCondition leftCondition = CubicInterpolation::SecondDerivative,
+        Real leftConditionValue = 0.0,
+        CubicInterpolation::BoundaryCondition rightCondition = CubicInterpolation::SecondDerivative,
+        Real rightConditionValue = 0.0);
 };
 
-struct MixedFlatConvexMonotoneInterpolation {
+struct MixedBackwardFlatCubic {
     #if !defined(SWIGJAVA) && !defined(SWIGCSHARP)
-    %feature("kwargs") MixedFlatConvexMonotoneInterpolation;
+    %feature("kwargs") MixedBackwardFlatCubic;
     #endif
-    MixedFlatConvexMonotoneInterpolation(
-        Size n = 0,
-        MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
+    MixedBackwardFlatCubic(
+        Size n,
+        MixedInterpolation::Behavior behavior,
+        CubicInterpolation::DerivativeApprox da,
+        bool monotonic = true,
+        CubicInterpolation::BoundaryCondition leftCondition = CubicInterpolation::SecondDerivative,
+        Real leftConditionValue = 0.0,
+        CubicInterpolation::BoundaryCondition rightCondition = CubicInterpolation::SecondDerivative,
+        Real rightConditionValue = 0.0);
+};
+
+struct MixedForwardFlatConvexMonotone {
+    #if !defined(SWIGJAVA) && !defined(SWIGCSHARP)
+    %feature("kwargs") MixedForwardFlatConvexMonotone;
+    #endif
+    MixedForwardFlatConvexMonotone(
+        Size n,
+        MixedInterpolation::Behavior behavior,
+        Real quadraticity = 0.3,
+        Real monotonicity = 0.7,
+        bool forcePositive = true);
+};
+
+struct MixedBackwardFlatConvexMonotone {
+    #if !defined(SWIGJAVA) && !defined(SWIGCSHARP)
+    %feature("kwargs") MixedBackwardFlatConvexMonotone;
+    #endif
+    MixedBackwardFlatConvexMonotone(
+        Size n,
+        MixedInterpolation::Behavior behavior,
         Real quadraticity = 0.3,
         Real monotonicity = 0.7,
         bool forcePositive = true);
@@ -395,43 +412,84 @@ class SafeConvexMonotoneInterpolation {
 %}
 
 %{
-class SafeMixedFlatCubicInterpolation {
+class SafeMixedForwardFlatCubicInterpolation {
   public:
-    SafeMixedFlatCubicInterpolation(const Array& x, const Array& y,
-                                    Size n,
-                                    MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
-                                    CubicInterpolation::DerivativeApprox da = CubicInterpolation::Spline,
-                                    bool monotonic = false,
-                                    CubicInterpolation::BoundaryCondition leftC = CubicInterpolation::SecondDerivative,
-                                    Real leftConditionValue = 0.0,
-                                    CubicInterpolation::BoundaryCondition rightC = CubicInterpolation::SecondDerivative,
-                                    Real rightConditionValue = 0.0)
+    SafeMixedForwardFlatCubicInterpolation(const Array& x, const Array& y,
+                                           Size n,
+                                           MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
+                                           CubicInterpolation::DerivativeApprox da = CubicInterpolation::Spline,
+                                           bool monotonic = false,
+                                           CubicInterpolation::BoundaryCondition leftC = CubicInterpolation::SecondDerivative,
+                                           Real leftConditionValue = 0.0,
+                                           CubicInterpolation::BoundaryCondition rightC = CubicInterpolation::SecondDerivative,
+                                           Real rightConditionValue = 0.0)
     : x_(x), y_(y), f_(x_.begin(), x_.end(), y_.begin(), n, behavior,
                        da, monotonic, leftC, leftConditionValue, rightC, rightConditionValue) {}
     Real operator()(Real x, bool allowExtrapolation=false) {
         return f_(x, allowExtrapolation);
     }
     Array x_, y_;
-    QuantLib::MixedFlatCubicInterpolation f_;
+    QuantLib::MixedForwardFlatCubicInterpolation f_;
 };
 %}
 
 %{
-class SafeMixedFlatConvexMonotoneInterpolation {
+class SafeMixedBackwardFlatCubicInterpolation {
   public:
-    SafeMixedFlatConvexMonotoneInterpolation(const Array& x, const Array& y,
-                                             Size n,
-                                             MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
-                                             Real quadraticity = 0.3,
-                                             Real monotonicity = 0.7,
-                                             bool forcePositive = true)
+    SafeMixedBackwardFlatCubicInterpolation(const Array& x, const Array& y,
+                                            Size n,
+                                            MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
+                                            CubicInterpolation::DerivativeApprox da = CubicInterpolation::Spline,
+                                            bool monotonic = false,
+                                            CubicInterpolation::BoundaryCondition leftC = CubicInterpolation::SecondDerivative,
+                                            Real leftConditionValue = 0.0,
+                                            CubicInterpolation::BoundaryCondition rightC = CubicInterpolation::SecondDerivative,
+                                            Real rightConditionValue = 0.0)
+    : x_(x), y_(y), f_(x_.begin(), x_.end(), y_.begin(), n, behavior,
+                       da, monotonic, leftC, leftConditionValue, rightC, rightConditionValue) {}
+    Real operator()(Real x, bool allowExtrapolation=false) {
+        return f_(x, allowExtrapolation);
+    }
+    Array x_, y_;
+    QuantLib::MixedBackwardFlatCubicInterpolation f_;
+};
+%}
+
+%{
+class SafeMixedForwardFlatConvexMonotoneInterpolation {
+  public:
+    SafeMixedForwardFlatConvexMonotoneInterpolation(const Array& x, const Array& y,
+                                                    Size n,
+                                                    MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
+                                                    Real quadraticity = 0.3,
+                                                    Real monotonicity = 0.7,
+                                                    bool forcePositive = true)
     : x_(x), y_(y), f_(x_.begin(), x_.end(), y_.begin(), n, behavior,
                        quadraticity, monotonicity, forcePositive) {}
     Real operator()(Real x, bool allowExtrapolation=false) {
         return f_(x, allowExtrapolation);
     }
     Array x_, y_;
-    QuantLib::MixedFlatConvexMonotoneInterpolation f_;
+    QuantLib::MixedForwardFlatConvexMonotoneInterpolation f_;
+};
+%}
+
+%{
+class SafeMixedBackwardFlatConvexMonotoneInterpolation {
+  public:
+    SafeMixedBackwardFlatConvexMonotoneInterpolation(const Array& x, const Array& y,
+                                                     Size n,
+                                                     MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
+                                                     Real quadraticity = 0.3,
+                                                     Real monotonicity = 0.7,
+                                                     bool forcePositive = true)
+    : x_(x), y_(y), f_(x_.begin(), x_.end(), y_.begin(), n, behavior,
+                       quadraticity, monotonicity, forcePositive) {}
+    Real operator()(Real x, bool allowExtrapolation=false) {
+        return f_(x, allowExtrapolation);
+    }
+    Array x_, y_;
+    QuantLib::MixedBackwardFlatConvexMonotoneInterpolation f_;
 };
 %}
 
@@ -486,36 +544,69 @@ class SafeConvexMonotoneInterpolation {
     Real operator()(Real x, bool allowExtrapolation=false);
 };
 
-%rename(SafeMixedFlatCubic) SafeMixedFlatCubicInterpolation;
-class SafeMixedFlatCubicInterpolation {
+%rename(SafeMixedForwardFlatCubic) SafeMixedForwardFlatCubicInterpolation;
+class SafeMixedForwardFlatCubicInterpolation {
     #if defined(SWIGCSHARP)
     %rename(call) operator();
     #endif
   public:
-    SafeMixedFlatCubicInterpolation(const Array& x, const Array& y,
-                                    Size n,
-                                    MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
-                                    CubicInterpolation::DerivativeApprox da = CubicInterpolation::Spline,
-                                    bool monotonic = false,
-                                    CubicInterpolation::BoundaryCondition leftC = CubicInterpolation::SecondDerivative,
-                                    Real leftConditionValue = 0.0,
-                                    CubicInterpolation::BoundaryCondition rightC = CubicInterpolation::SecondDerivative,
-                                    Real rightConditionValue = 0.0);
+    SafeMixedForwardFlatCubicInterpolation(const Array& x, const Array& y,
+                                           Size n,
+                                           MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
+                                           CubicInterpolation::DerivativeApprox da = CubicInterpolation::Spline,
+                                           bool monotonic = false,
+                                           CubicInterpolation::BoundaryCondition leftC = CubicInterpolation::SecondDerivative,
+                                           Real leftConditionValue = 0.0,
+                                           CubicInterpolation::BoundaryCondition rightC = CubicInterpolation::SecondDerivative,
+                                           Real rightConditionValue = 0.0);
     Real operator()(Real x, bool allowExtrapolation=false);
 };
 
-%rename(SafeMixedFlatConvexMonotone) SafeMixedFlatConvexMonotoneInterpolation;
-class SafeMixedFlatConvexMonotoneInterpolation {
+%rename(SafeMixedBackwardFlatCubic) SafeMixedBackwardFlatCubicInterpolation;
+class SafeMixedBackwardFlatCubicInterpolation {
     #if defined(SWIGCSHARP)
     %rename(call) operator();
     #endif
   public:
-    SafeMixedFlatConvexMonotoneInterpolation(const Array& x, const Array& y,
-                                             Size n,
-                                             MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
-                                             Real quadraticity = 0.3,
-                                             Real monotonicity = 0.7,
-                                             bool forcePositive = true);
+    SafeMixedBackwardFlatCubicInterpolation(const Array& x, const Array& y,
+                                            Size n,
+                                            MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
+                                            CubicInterpolation::DerivativeApprox da = CubicInterpolation::Spline,
+                                            bool monotonic = false,
+                                            CubicInterpolation::BoundaryCondition leftC = CubicInterpolation::SecondDerivative,
+                                            Real leftConditionValue = 0.0,
+                                            CubicInterpolation::BoundaryCondition rightC = CubicInterpolation::SecondDerivative,
+                                            Real rightConditionValue = 0.0);
+    Real operator()(Real x, bool allowExtrapolation=false);
+};
+
+%rename(SafeMixedForwardFlatConvexMonotone) SafeMixedForwardFlatConvexMonotoneInterpolation;
+class SafeMixedForwardFlatConvexMonotoneInterpolation {
+    #if defined(SWIGCSHARP)
+    %rename(call) operator();
+    #endif
+  public:
+    SafeMixedForwardFlatConvexMonotoneInterpolation(const Array& x, const Array& y,
+                                                    Size n,
+                                                    MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
+                                                    Real quadraticity = 0.3,
+                                                    Real monotonicity = 0.7,
+                                                    bool forcePositive = true);
+    Real operator()(Real x, bool allowExtrapolation=false);
+};
+
+%rename(SafeMixedBackwardFlatConvexMonotone) SafeMixedBackwardFlatConvexMonotoneInterpolation;
+class SafeMixedBackwardFlatConvexMonotoneInterpolation {
+    #if defined(SWIGCSHARP)
+    %rename(call) operator();
+    #endif
+  public:
+    SafeMixedBackwardFlatConvexMonotoneInterpolation(const Array& x, const Array& y,
+                                                     Size n,
+                                                     MixedInterpolation::Behavior behavior = MixedInterpolation::SplitRanges,
+                                                     Real quadraticity = 0.3,
+                                                     Real monotonicity = 0.7,
+                                                     bool forcePositive = true);
     Real operator()(Real x, bool allowExtrapolation=false);
 };
 
