@@ -208,6 +208,10 @@ export_piecewise_curve_new(PiecewiseMixedFlatConvexMonotoneForward, ForwardRate,
 export_piecewise_curve_new(PiecewiseMixedFlatConvexMonotoneZero, ZeroYield, MixedForwardFlatConvexMonotone);
 export_piecewise_curve_new(PiecewiseMixedFlatConvexMonotoneDiscount, Discount, MixedForwardFlatConvexMonotone);
 
+export_piecewise_curve_new(PiecewiseMixedBackwardFlatConvexMonotoneForward, ForwardRate, MixedBackwardFlatConvexMonotone);
+export_piecewise_curve_new(PiecewiseMixedBackwardFlatConvexMonotoneZero, ZeroYield, MixedBackwardFlatConvexMonotone);
+export_piecewise_curve_new(PiecewiseMixedBackwardFlatConvexMonotoneDiscount, Discount, MixedBackwardFlatConvexMonotone);
+
 
 // global boostrapper
 // hard-coded to linearly-interpolated, simply-compounded zero rates for now
